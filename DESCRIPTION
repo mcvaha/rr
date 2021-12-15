@@ -1,0 +1,34 @@
+Package:
+Sem 6
+Reading txt file as data
+Sal = read.table("P130.txt", header = TRUE, sep = "\t", dec = "."
+, col.names = c("salary", "exper", "educ", "manag"))
+
+all(complete.cases(Sal)) 
+
+#checking if var is qual
+is.factor(Sal$educ)
+
+unique(Sal$educ) 
+
+#Encoding educ and manag as qual variable and adding labels
+Sal$educ = factor(Sal$educ, levels = c(1, 2, 3) 
+,labels = c("HighS", "Bachelor", "Master"))
+
+Sal$manag = factor(Sal$manag, levels = c(0, 1) 
+,labels = c("NonMan", "Man"))
+
+levels(Sal$educ) -> groups of qual variable educ
+
+contrasts(Sal$educ) -> we can check reference group like this
+
+Sal$educ = relevel(Sal$educ, ref = "Master") -> changing reference group to Mast
+
+ADDITIVE RELATIONSHIP MODEL
+fit = lm(salary ~ educ + manag + exper, data = Sal)
+head(model.matrix(fit))
+coef(fit) -> difference with reference group
+
+Show that model does not provide correct descr of reality
+plot(resid(fit) ~ Sal$exper) -> good model is the one where resid rand distr around 0
+

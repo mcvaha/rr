@@ -1,0 +1,230 @@
+Package:
+Sem 6
+Reading txt file as data
+Sal = read.table("P130.txt", header = TRUE, sep = "\t", dec = "."
+, col.names = c("salary", "exper", "educ", "manag"))
+
+all(complete.cases(Sal))
+
+#checking if var is qual
+is.factor(Sal$educ)
+
+unique(Sal$educ)
+
+#Encoding educ and manag as qual variable and adding labels
+Sal$educ = factor(Sal$educ, levels = c(1, 2, 3)
+,labels = c("HighS", "Bachelor", "Master"))
+
+Sal$manag = factor(Sal$manag, levels = c(0, 1)
+,labels = c("NonMan", "Man"))
+
+levels(Sal$educ) -> groups of qual variable educ
+
+contrasts(Sal$educ) -> we can check reference group like this
+
+Sal$educ = relevel(Sal$educ, ref = "Master") -> changing reference group to Mast
+---------------
+ADDITIVE RELATIONSHIP MODEL
+fit = lm(salary ~ educ + manag + exper, data = Sal)
+head(model.matrix(fit))
+coef(fit) -> difference with reference group
+
+Show that model does not provide correct descr of reality
+plot(resid(fit) ~ Sal$exper) -> good model is the one where resid rand distr around 0
+plot(resid(fit) ~ interaction(Sal$educ, Sal$manag)) -> boxplot
+
+xyplot(salary ~ exper | manag, group = educ, auto.key = TRUE, data = Sal)
+
+Construction of regr model
+# NonMan + HighS
+abline(coef(fit)[1], coef(fit)[5], lty = 2, lwd = 3)
+# NonMan + Bachelor
+abline(coef(fit)[1]+coef(fit)[2], coef(fit)[5], lwd = 3)
+# NonMan + Master
+abline(coef(fit)[1]+coef(fit)[3], coef(fit)[5], lty = 3, lwd = 3)
+# Man + HighS
+abline(coef(fit)[1]+coef(fit)[4], coef(fit)[5], col = "red", lty = 2, lwd = 3)
+-----------------
+NO ADDITIVE RELATIONSHIP
+fitInter = lm(salary ~ educ + manag + exper + educ:manag, data = Sal)
+plot(resid(fitInter) ~ Sal$exper)
+plot(resid(fitInter) ~ interaction(Sal$educ, Sal$manag))
+
+CHECKING IF INTER TERMS ARE IMPORTNAT
+anova(fit, fitInter) -> if p<SL => Interac terms are important
+-------------------
+Sem 7
+
+CUBIC POLYNOMIAL REGRESSION
+fit = lm(temp ~ poly(long, degree = 3, raw = TRUE) + poly(lat, degree = 3, raw = TRUE)
+, data = USTemp)
+
+head(model.matrix(fit))
+
+fitI = lm(temp ~ long + I(long^2) + I(long^3) + lat + I(lat^2) + I(lat^3)
+, data = USTemp)
+head(model.matrix(fitI))
+
+orthogonal polynomials
+fitO = lm(temp ~ poly(long, degree = 3) + poly(lat, degree = 3), data = USTemp)
+
+to check if vector of fitted values is the same
+all.equal(fitted(fit), fitted(fitI))
+
+
+PLOTTING EST REGRESSION FUNC
+
+Contour plot
+contour(fit, lat ~ long, image = TRUE)
+text(USTemp$long, USTemp$lat, labels=USTemp$city, cex= 0.6)
+----
+3D plot
+
+par(mar = c(2, 2, 2, 2))
+persp(fit, lat ~ long, col = rev(heat.colors(40)), contours = list(z = "top", col="blue"), theta = 45, phi = 40)
+
+----
+Does model assume the additive relationship? Verify by plotting est regre function
+
+eff1 = Effect(c("lat", "long"), fit, xlevels = list(long = seq(-120, -70, by = 1), lat = seq(25, 45, by = 5)))
+plot(eff1, x.var = "long", lines = list(multiline = TRUE)
+
+----
+Plot of est regr funch holding Y to X2, holding X1 const
+
+eff2 = Effect(c("lat", "long"), fit, xlevels = list(long = seq(-120, -70, by = 10), lat = seq(25, 45, by = 1)))
+plot(eff2, x.var = "lat", lines = list(multiline = TRUE))
+
+------------------
+General Linear Hypothesis test with restricted model
+Check if relationship between Y and X2 (lat), holding X1 const is linear
+
+fitR = lm(temp ~ poly(long, degree = 3, raw = TRUE) + lat, data = USTemp)
+
+anova(fitR, fit) -> p>0.01 => model linear in latitute
+
+---
+Matrix R and vector r
+
+(Rmat = matrix(c(0,0,0,0,0,1,0,0,0,0,0,0,0,1), ncol = 7, byrow = TRUE))
+(rvector = matrix(c(0, 0)))
+
+anova(fitR, fit) -> Q(e_R) - Q(e) = Sum sq | Restr if biggest df
+J =2 is number of rows of T matrix
+---
+verify that Q(e ) and Q(eR) are unr and restr resid sum sq
+
+(Qe = sum(resid(fit)^2))      != rss1
+(QeR = sum(resid(fitR)^2))    != rss2
+------------------
+Non-additive relationship: model with the interaction term
+fitInter = lm(temp ~ poly(long, degree = 3, raw = TRUE)
++poly(lat, degree = 3, raw = TRUE) + lat:long, data = USTemp)
+--
+plotting holding X2(lat) constant
+
+eff1Inter = Effect(c("lat", "long"), fitInter, xlevels = list(long = seq(-120, -70, by = 1), lat = seq(25, 45, by = 5)))
+plot(eff1Inter, x.var = "long", lines = list(multiline = TRUE))
+
+plotting holding X1(long) constant
+
+eff2Inter = Effect(c("lat", "long"), fitInter, xlevels = list(long = seq(-120, -70, by = 10), lat = seq(25, 45, by = 1)))
+plot(eff2Inter, x.var = "lat", lines = list(multiline = TRUE))
+
+--
+Is interaction term important for the model above?
+
+anova(fit, fitInter) => p>SL => additivity
+
+---------------
+Seminar 8
+Regression Splines
+
+fit = lm(temp ~ bs(long, degree = 1, knots = c(-80, -100)) + bs(lat, degree = 1, knots = c(30, 40)), data = USTemp)
+new.data = expand.grid(lat = 35, long = seq(-71, -120, by = -1))
+plot(seq(-71, -120, by = -1), predict(fit, new.data), type = "l")
+
+fit2 = lm(temp ~ bs(long, degree = 1, df = 1 + 2) + bs(lat, degree = 1, df = 1 + 2), data = USTemp)
+plot(seq(-71, -120, by = -1), predict(fit2, new.data), type = "l")
+-----
+Repeated Observations
+plot(distance ~ speed, data = brake)
+plot(distance/speed ~ speed, data = brake)
+
+fit_full = lm(distance/speed ~ factor(speed), data = brake) 
+fitSL = lm(distance/speed ~ speed, data = brake)
+
+plot(brake$distance/brake$speed ~ brake$speed)
+points(brake$speed, fitted(fit_full), pch = 4, col = "blue")
+abline(fitSL, col = "red")
+
+anova(fitSL, fit_full)
+-----
+Relative importance of variables
+boxplot(CC[ , -c(1, 4, 8)])
+fit_CC = lm(Sales ~ Age + HS + Income + Black + Female + Price, data = CC)
+anova(fit_CC) 
+fit_CC_Rev = lm(Sales ~ Price + Female + Black + Income + HS + Age, data = CC)
+anova(fit_CC_Rev)
+(summary(fit_CC)$r.squared)
+(relImp = calc.relimp(fit_CC, type = "lmg"))
+plot(relImp)
+
+-------------
+Seminar 9
+Regression outliers and influential observations
+rownames(USTemp) = USTemp$city
+fit_temp = lm(temp ~ poly(long, degree = 3) + lat, data = USTemp) 
+
+contour(fit_temp, lat ~ long, image = TRUE)
+text(USTemp$long, USTemp$lat, labels=USTemp$city, cex= 0.6)
+
+plotting externally studentized residuals against fitted values
+plot(rstudent(fit_temp) ~ fitted(fit_temp))
+abline(h = 0, lty = 3)
+
+plotting externally studentized residuals against longitude
+plot(rstudent(fit_temp) ~ USTemp$long)
+abline(h = 0, lty = 3)
+
+plotting externally studentized residuals against latitude
+plot(rstudent(fit_temp) ~ USTemp$lat)
+abline(h = 0, lty = 3)
+
+residualPlots(fit_temp, tests = FALSE, quadratic = FALSE, id = list(n=3), type = "rstudent")
+
+Cook's dist
+head(sort(cooks.distance(fit_temp), decreasing = TRUE))
+
+influencePlot(fit_temp, id = list(n = 3))
+
+n = dim(model.matrix(fit_temp))[1]
+p = dim(model.matrix(fit_temp))[2]
+max(abs(rstudent(fit_temp))) > qt(1 - 0.05/(2 * n), n - p - 1)
+---------------------
+Heteroscedasticity
+
+plotting the braking distance against speed
+plot(distance ~ speed, data = brake)
+
+estimating the quadratic polynomial regression model
+fit_dist = lm(distance ~ speed + I(speed^2), data = brake)
+
+plot(resid(fit_dist) ~ brake$speed)
+abline(h = 0, lty = 3)
+
+Levene's heteroscedasticity test
+brake.p = brake[brake$speed %in% c(5, 8, 25), ]
+head(brake.p)
+leveneTest(distance ~ factor(speed), center = mean, data = brake.p)
+
+Goldfeld-Quandt test
+gqtest(fit_dist, point = 0.5, fraction = 0.33, alternative = "greater", order.by = ~ speed, data = brake)
+
+Glejser test
+fit.aux = lm(abs(resid(fit_dist)) ~ speed, data = brake)
+
+plotting absolute values of the residuals from the primary regression model against speed
+
+plot(abs(resid(fit_dist)) ~ brake$speed)
+abline(fit.aux)
